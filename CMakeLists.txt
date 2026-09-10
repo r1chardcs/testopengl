@@ -9,7 +9,8 @@ add_executable(Yoka
         Core/Window.cpp
         Core/Window.h
         Core/RenderEngine.cpp
-        Core/RenderEngine.h)
+        Core/RenderEngine.h
+        Include/stb_truetype.h)
 
 target_link_libraries(Yoka PRIVATE
         opengl32

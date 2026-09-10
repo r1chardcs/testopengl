@@ -4,6 +4,8 @@
 
 #include "Window.h"
 
+#include "RenderEngine.h"
+
 Window::Window(const String &title, INT width, INT height) : title(title), width(width), height(height) {
     handle = glfwCreateWindow(width, height, title.c_str(), 0, 0);
 }
@@ -26,6 +28,8 @@ void Window::Show() {
 
         glViewport(0, 0, width, height);
     });
+    LoadFont("C:\\Windows\\Fonts\\arial.ttf", 32);
+
     while (true) {
         if (glfwWindowShouldClose(handle)) {
             break;

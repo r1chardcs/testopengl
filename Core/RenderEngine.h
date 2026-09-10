@@ -17,6 +17,23 @@ struct Color {
 #define COLOR_BLUE MAKE_COLOR(0,0,1,1)
 #define COLOR_YELLOW MAKE_COLOR(1,1,0,1)
 
+struct Glyph {
+    float u0, v0;
+    float u1, v1;
+
+    int width;
+    int height;
+
+    int bearingX;
+    int bearingY;
+
+    int advance;
+};
+#undef DrawText
+
+void LoadFont(const char* path, float pixelHeight);
+void DrawText(const char* text, float px, float py, float r, float g, float b, float scale);
+
 struct RenderEngine {
     void rectangle(FLOAT minX, FLOAT minY, FLOAT maxX, FLOAT maxY,
         const Color &color);

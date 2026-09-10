@@ -11,6 +11,8 @@ int main() {
     glfwInit();
     Window window("yoka", 600, 600);
     RenderEngine RE;
+
+
     window.SetCallback([&RE](Window* h) {
         int w = h->width;
         int hh = h->height;
@@ -42,6 +44,8 @@ int main() {
 
         RE.circle(x, y, 0.5f, COLOR_GREEN);
         RE.rectangle(x - size, y - size, x + size, y + size, COLOR_YELLOW);
+
+        DrawText("Hello, World", 0, 0, 1, 1, 1, 0.05f);
     });
     window.Show();
     glfwTerminate();
