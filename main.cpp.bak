@@ -1,0 +1,260 @@
+#include <chrono>
+#include <cmath>
+#include <ctime>
+#include <vector>
+#include <Windows.h>
+#include "include/glfw3.h"
+
+#define mapW 40
+#define mapH 40
+
+struct block {
+    bool fill = false;
+};
+
+struct entity {
+    float x, y;
+    int health;
+};
+
+float player_x = 20,
+      player_y = 20;
+
+int health = 3;
+
+block blocks[mapW][mapH];
+std::vector<entity> entities;
+
+void create_map() {
+    srand(time(NULL));
+    for (int i = 0; i < mapW; i++) {
+        for (int k = 0; k < mapH; k++) {
+            if (i == 0 || i == mapW - 1 || k == 0 || k == mapH - 1) {
+                blocks[i][k].fill = true;
+            } else {
+                blocks[i][k].fill = false;
+                if (rand() % 150 == 0) {
+                    entity entity;
+                    entity.x = i;
+                    entity.y = k;
+                    entity.health = 2;
+                    if (entities.size() < 5) {
+                        entities.push_back(entity);
+                    }
+                }
+            }
+        }
+    }
+}
+
+void render_entity(entity entity) {
+    if (entity.health <= 0) return;
+    glBegin(GL_QUADS);
+    glColor3f(1, 1, 0);
+
+    glVertex2f(entity.x - 0.5f, entity.y - 0.5);
+    glVertex2f(entity.x + 0.5f, entity.y - 0.5);
+    glVertex2f(entity.x + 0.5f, entity.y + 0.5);
+    glVertex2f(entity.x - 0.5f, entity.y + 0.5);
+    glEnd();
+}
+
+void render_block(block block) {
+    glBegin(GL_QUADS);
+    if (block.fill) {
+        glColor3f(1,0,0);
+    }
+    else return;
+    glVertex2f(-0.5, -0.5);
+    glVertex2f(0.5, -0.5);
+    glVertex2f(0.5, 0.5);
+    glVertex2f(-0.5, 0.5);
+    glEnd();
+}
+
+void render_bar() {
+    glColor3f(1.0f, 1.0f, 1.0f);
+
+    for (int i = 0; i < health; i++) {
+        glPushMatrix();
+
+        glTranslatef((float)i, 0.0f, 0.0f);
+
+        glBegin(GL_QUADS);
+
+        glVertex2f(0.0f, 0.0f);
+        glVertex2f(0.0f, 0.8f);
+        glVertex2f(0.8f, 0.8f);
+        glVertex2f(0.8f, 0.0f);
+
+        glEnd();
+
+        glPopMatrix();
+    }
+}
+
+void draw_player() {
+    glBegin(GL_QUADS);
+
+    glColor3f(0, 1, 0);
+
+    glVertex2f(player_x - 0.5f, player_y - 0.5f);
+    glVertex2f(player_x + 0.5f, player_y - 0.5f);
+    glVertex2f(player_x + 0.5f, player_y + 0.5f);
+    glVertex2f(player_x - 0.5f, player_y + 0.5f);
+
+    glEnd();
+}
+auto last_damage = std::chrono::steady_clock::now();
+void render_map() {
+    glLoadIdentity();
+
+    glScalef(2.0f / mapW, 2.0f / mapH, 1.0f);
+
+    glTranslatef(-mapW / 2.0f + 0.5f,
+                 -mapH / 2.0f + 0.5f,
+                 0.0f);
+
+    for (int i = 0; i < mapW; i++) {
+        for (int k = 0; k < mapH; k++) {
+            glPushMatrix();
+
+            glTranslatef((float)i, (float)k, 0.0f);
+
+            render_block(blocks[i][k]);
+
+            glPopMatrix();
+        }
+    }
+
+    for (auto& entity : entities) {
+        float dx = player_x - entity.x;
+        float dy = player_y - entity.y;
+
+        float distance = sqrtf(dx * dx + dy * dy);
+
+        if (distance > 1.0f) {
+            dx /= distance;
+            dy /= distance;
+
+            entity.x += dx * 0.01f;
+            entity.y += dy * 0.01f;
+        }
+
+        if (distance <= 1.0f) {
+            auto now = std::chrono::steady_clock::now();
+
+            if (std::chrono::duration_cast<std::chrono::milliseconds>(
+                    now - last_damage).count() >= 1000) {
+
+                health--;
+                last_damage = now;
+                    }
+        }
+
+        render_entity(entity);
+    }
+    if (health == 0) {
+        abort();
+    }
+
+
+    draw_player();
+    render_bar();
+}
+void draw_circle(float x, float y, float radius) {
+    glColor3f(1.0f, 1.0f, 1.0f);
+
+    glBegin(GL_LINE_LOOP);
+
+    for (int i = 0; i < 64; i++) {
+        float angle = 2.0f * 3.14159265f * i / 64.0f;
+
+        float px = x + cosf(angle) * radius;
+        float py = y + sinf(angle) * radius;
+
+        glVertex2f(px, py);
+    }
+
+    glEnd();
+}
+
+void move_player(float x, float y) {
+    if (blocks[(int)x][(int)y].fill) {
+        return;
+    }
+
+    player_x = x;
+    player_y = y;
+}
+
+auto last_attack = std::chrono::steady_clock::now();
+
+void attack(float x, float y) {
+    auto now = std::chrono::steady_clock::now();
+
+    if (std::chrono::duration<float>(now - last_attack).count() < 0.5f)
+        return;
+
+    last_attack = now;
+
+    draw_circle(x, y, 0.7f);
+
+    for (auto& entity : entities) {
+        float dx = entity.x - x;
+        float dy = entity.y - y;
+
+        float distance = sqrtf(dx * dx + dy * dy);
+
+        if (distance <= 0.7f) {
+            entity.health--;
+            printf("damage entity!\n");
+        }
+    }
+}
+
+int main() {
+    glfwInit();
+    GLFWwindow* handle = glfwCreateWindow(600, 600, "test", 0, 0);
+
+    glfwMakeContextCurrent(handle);
+    create_map();
+
+    while (true) {
+        if (glfwWindowShouldClose(handle)) {
+            break;
+        }
+        if (glfwGetKey(handle, GLFW_KEY_W)) {
+            move_player(player_x, player_y + 0.1);
+        }
+        if (glfwGetKey(handle, GLFW_KEY_S)) {
+            move_player(player_x, player_y - 0.1);
+        }
+        if (glfwGetKey(handle, GLFW_KEY_D)) {
+            move_player(player_x+0.1, player_y);
+        }
+        if (glfwGetKey(handle, GLFW_KEY_A)) {
+            move_player(player_x-0.1, player_y);
+        }
+
+        glClear(GL_COLOR_BUFFER_BIT);
+        render_map();
+        if (glfwGetMouseButton(handle, GLFW_MOUSE_BUTTON_1)) {
+            double mouse_x;
+            double mouse_y;
+
+            glfwGetCursorPos(handle, &mouse_x, &mouse_y);
+
+            float world_x = (float)mouse_x / 600.0f * mapW;
+            float world_y = (float)(600.0 - mouse_y) / 600.0f * mapH;
+            attack(world_x, world_y);
+        }
+        glfwSwapBuffers(handle);
+        glfwPollEvents();
+    }
+
+    glfwDestroyWindow(handle);
+    glfwTerminate();
+
+    return 0;
+}
